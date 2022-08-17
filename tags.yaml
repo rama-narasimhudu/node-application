@@ -1,0 +1,6 @@
+---
+  Tags:
+    - Key: "Name"
+      Value: "test"
+    - Key: "Env"
+      Value: "dev"

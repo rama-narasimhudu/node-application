@@ -1,0 +1,34 @@
+version: 0.2
+env:
+  variables:
+    S3_BUCKET: "kannanbucket9823577"
+
+phases:
+  install:
+    runtime-versions:
+      java: openjdk8   #For Ubuntu standard:4.0 its not supported for more details check "https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html"
+      python: 3.8
+      # nodejs: 10
+    commands:
+      # - pip install boto3
+      - pip install awscli
+      - pip install -U wheel
+      - pip install -r requirements.txt
+      - pip install -U botocore
+      # - pip install mkdocs
+      # - apt-get update
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - mvn --version
+      - python3 --version
+  build:
+    commands:
+      - echo Build started on `date`
+      - aws s3 cp ./tags.yaml s3://mybucket-765578585/tags.yaml
+      - cfn-lint template.yaml
+      # - mvn clean package
+  post_build:
+    commands:
+      - aws s3 cp ./tags.yaml s3://mybucket-765578585/tags.yaml

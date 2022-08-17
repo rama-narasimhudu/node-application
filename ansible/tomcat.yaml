@@ -1,0 +1,74 @@
+---
+ - hosts: all
+   become: true
+   vars_files:
+     - ./vars.yaml
+   tasks:
+     - name: Installing java
+       yum:
+         name: java-{{java_version}}-openjdk-devel
+         state: present
+     # - name: Updating java Version
+     #   alternatives:
+     #     name: java
+     #     path: /usr/lib/jvm/jre-{{java_version}}-openjdk.x86_64/bin/java
+     # - name: Updating javac Version
+     #   alternatives:
+     #     name: javac
+     #     path: /usr/lib/jvm/java-{{java_version}}-openjdk.x86_64/bin/javac
+     - name: Creating Tomcat Group
+       group:
+         name: tomcat
+     - name: Creating Tomcat user
+       user:
+         name: tomcat
+         group: tomcat
+     - name: Dowloading tomcat
+       get_url:
+         url: https://dlcdn.apache.org/tomcat/tomcat-8/v8.5.82/bin/apache-tomcat-8.5.82.tar.gz
+         dest: /opt/apache-tomcat-8.5.82.tar.gz
+     - name: Extracting Tomcat tar file
+       command: chdir=/usr/share tar xvzf /opt/apache-tomcat-{{tomcat_version}}.tar.gz -C /opt/ creates=/opt/apache-tomcat-{{tomcat_version}}
+     - name: Symlink between repos
+       file:
+         src: /opt/apache-tomcat-{{tomcat_version}}
+         path: /usr/share/tomcat
+         state: link
+     - name: Changing ownership of tomcat
+       file:
+         path: /usr/share/tomcat/
+         owner: tomcat
+         group: tomcat
+         state: directory
+         recurse: yes
+     - name: coping script to init.d repo
+       copy:
+         src: ./tomcat.sh
+         dest: /etc/init.d/tomcat
+         mode: 0755
+       notify:
+         - Restarting tomcat Server
+     - name: Removing Restrections
+       copy: src=./context.xml dest=/usr/share/tomcat/webapps/manager/META-INF/context.xml
+       notify:
+         - Restarting tomcat Server
+     - name: Creating Users
+       copy: src=./tomcat-users.xml dest=/usr/share/tomcat/conf/tomcat-users.xml
+       notify:
+         - Restarting tomcat Server
+     - name: Sarting tomcat
+       service:
+         name: tomcat
+         state: started
+         enabled: yes
+     - name: Coping war file to webapps folder
+       copy:
+         src: /var/lib/jenkins/workspace/tomcat-deploy/target/nodeapp.war
+         dest: /usr/share/tomcat/webapps/nodeapp.war
+       notify:
+         - Restarting tomcat Server
+   handlers:
+     - name: Restarting tomcat Server
+       service:
+         name: tomcat
+         state: restarted
